@@ -26,8 +26,9 @@ Users online: 13
 TODO
 ----
 
-- [ ] Better/more exception handling
+- [ ] https://github.com/websockets/ws#how-to-detect-and-close-broken-connections
 - [ ] Better output via websocket and/or json
+- [ ] UA/referrer parsing for mobile/desktop/social/search/etc
+- [ ] Better/more exception handling
 - [ ] Authentication
 - [ ] Secure https websocket connection
-- [ ] UA/referrer parsing for mobile/desktop/social/search/etc
