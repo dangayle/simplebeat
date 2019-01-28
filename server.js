@@ -1,7 +1,8 @@
 const http = require('http'),
     express = require('express'),
     ws = require('ws'),
-    redis = require("redis");
+    redis = require("redis"),
+    _ = require('lodash');
 
 const app = express(),
     server = http.Server(app),
@@ -17,15 +18,16 @@ const app = express(),
     },
     client = redis.createClient();
 
+// Redis keys
 const users = 'users',
     userCount = 'userCount',
-    userLastID = 'userLastID';
+    urls = 'urls';
 
 
 wss.on('connection', (ws, req) => {
 
     // Set redis key
-    let id = `user-${req.headers['sec-websocket-key']}`;
+    const id = `user-${req.headers['sec-websocket-key']}`;
 
     // Set user/page information
     let user = {
@@ -47,22 +49,28 @@ wss.on('connection', (ws, req) => {
 
         switch (msg.type) {
             case 'init':
+                // get referrer and url info from init
                 user.url = msg.url;
-                user.ref = msg.ref;
+                user.referrer = msg.referrer;
                 break;
         }
         user.updated = Date.now();
+
+        //Add user hash, increment counting stats
         client.hmset(id, user, (err, result) => {
+            // Increments count of sorted set item
+            client.zincrby(urls, 1, user.url);
+            // Add user to list of users
             client.sadd(users, id);
+            // Increment userCount
             client.incr(userCount);
         });
     });
 
-    // On close, delete user, decrement userCount
+    // On close, delete user, decrement counting stats
     ws.once('close', () => {
         client.del(id, (err, result) => {
-            console.log(err);
-            console.log(result);
+            client.zincrby(urls, -1, user.url);
             client.srem(users, id);
             client.decr(userCount);
         });
@@ -79,7 +87,7 @@ app.get('/analytics.js', (req, res) => {
         ws.send(JSON.stringify({
             type: 'init',
             url: document.location.href,
-            ref: document.referrer
+            referrer: document.referrer
         }));
     };`;
 
@@ -107,7 +115,14 @@ app.get('/test/*', (req, res) => {
 
 setInterval(() => {
     client.get(userCount, (err, result) => {
-        console.log(`Users online: ${ result }`)
+        console.log(`Users online: ${ result }`);
+    });
+
+    client.zrevrange('urls', 0, 4, 'withscores', (err, result) => {
+        // split list into groups of two
+        // See also : https://stackoverflow.com/a/52202757/250241
+        result = _.fromPairs(_.chunk(result, 2));
+        console.log(result);
     });
 }, 10 * 1000);
 
