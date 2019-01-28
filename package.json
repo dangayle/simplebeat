@@ -21,5 +21,8 @@
   "optionalDependencies": {
     "bufferutil": "^4.0.1",
     "utf-8-validate": "^5.0.2"
+  },
+  "devDependencies": {
+    "prettier": "1.16.1"
   }
 }

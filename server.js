@@ -1,46 +1,44 @@
-const http = require('http'),
-    express = require('express'),
-    ws = require('ws'),
+const http = require("http"),
+    express = require("express"),
+    ws = require("ws"),
     redis = require("redis"),
-    _ = require('lodash');
+    _ = require("lodash");
 
 const app = express(),
     server = http.Server(app),
     wss = new ws.Server({
         server: server,
-        path: '/',
+        path: "/",
         clientTracking: false,
         maxPayload: 1024
     }),
     config = {
         port: 8080,
-        wshost: 'ws://localhost:8080'
+        wshost: "ws://localhost:8080"
     },
     client = redis.createClient();
 
 // Redis keys
-const users = 'users',
-    userCount = 'userCount',
-    urls = 'urls';
+const users = "users",
+    userCount = "userCount",
+    urls = "urls";
 
-
-wss.on('connection', (ws, req) => {
-
+wss.on("connection", (ws, req) => {
     // Set redis key
-    const id = `user-${req.headers['sec-websocket-key']}`;
+    const id = `user-${req.headers["sec-websocket-key"]}`;
 
     // Set user/page information
     let user = {
         id: id,
         host: req.headers.host,
-        ip: req.headers['x-real-ip'] || req.connection.remoteAddress,
-        ua: req.headers['user-agent'],
+        ip: req.headers["x-real-ip"] || req.connection.remoteAddress,
+        ua: req.headers["user-agent"],
         date: Date.now(),
         updated: Date.now()
     };
 
     // Add user to Redis, increment userCount
-    ws.on('message', msg => {
+    ws.on("message", msg => {
         try {
             msg = JSON.parse(msg);
         } catch (e) {
@@ -48,7 +46,7 @@ wss.on('connection', (ws, req) => {
         }
 
         switch (msg.type) {
-            case 'init':
+            case "init":
                 // get referrer and url info from init
                 user.url = msg.url;
                 user.referrer = msg.referrer;
@@ -68,7 +66,7 @@ wss.on('connection', (ws, req) => {
     });
 
     // On close, delete user, decrement counting stats
-    ws.once('close', () => {
+    ws.once("close", () => {
         client.del(id, (err, result) => {
             client.zincrby(urls, -1, user.url);
             client.srem(users, id);
@@ -77,10 +75,9 @@ wss.on('connection', (ws, req) => {
     });
 });
 
-wss.on('error', err => console.error(err));
+wss.on("error", err => console.error(err));
 
-
-app.get('/analytics.js', (req, res) => {
+app.get("/analytics.js", (req, res) => {
     let js = `
     var ws = new WebSocket('${config.wshost}');
     ws.onopen = function () {
@@ -91,10 +88,10 @@ app.get('/analytics.js', (req, res) => {
         }));
     };`;
 
-    res.set('Content-Type', 'application/javascript');
+    res.set("Content-Type", "application/javascript");
     res.send(js);
 });
-app.get('/test/*', (req, res) => {
+app.get("/test/*", (req, res) => {
     let html = `
       <!doctype html>
       <html>
@@ -112,13 +109,12 @@ app.get('/test/*', (req, res) => {
     res.send(html);
 });
 
-
 setInterval(() => {
     client.get(userCount, (err, result) => {
-        console.log(`Users online: ${ result }`);
+        console.log(`Users online: ${result}`);
     });
 
-    client.zrevrange('urls', 0, 4, 'withscores', (err, result) => {
+    client.zrevrange("urls", 0, 4, "withscores", (err, result) => {
         // split list into groups of two
         // See also : https://stackoverflow.com/a/52202757/250241
         result = _.fromPairs(_.chunk(result, 2));
@@ -126,5 +122,5 @@ setInterval(() => {
     });
 }, 10 * 1000);
 
-app.disable('x-powered-by');
+app.disable("x-powered-by");
 server.listen(config.port);
