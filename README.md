@@ -28,3 +28,4 @@ TODO
 - [ ] Better/more exception handling
 - [ ] Better output via websocket and/or json
 - [ ] Authentication
+- [ ] Secure https websocket connection
