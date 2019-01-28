@@ -30,3 +30,4 @@ TODO
 - [ ] Better output via websocket and/or json
 - [ ] Authentication
 - [ ] Secure https websocket connection
+- [ ] UA/referrer parsing for mobile/desktop/social/search/etc
