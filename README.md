@@ -1,4 +1,5 @@
-# simplebeat
+# simplebeat [![code style: prettier](https://img.shields.io/badge/code_style-prettier-ff69b4.svg?style=flat-square)](https://github.com/prettier/prettier)
+
 
 Uses a websocket connection to track pageviews, stores data in Redis
 
