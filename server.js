@@ -9,7 +9,6 @@ const app = express(),
     wss = new ws.Server({
         server: server,
         path: "/",
-        clientTracking: false,
         maxPayload: 1024
     }),
     config = {
@@ -23,7 +22,16 @@ const users = "users",
     userCount = "userCount",
     urls = "urls";
 
+function noop() {}
+
+function heartbeat() {
+    this.isAlive = true;
+}
+
 wss.on("connection", (ws, req) => {
+    ws.isAlive = true;
+    ws.on("pong", heartbeat);
+
     // Set redis key
     const id = `user-${req.headers["sec-websocket-key"]}`;
 
@@ -109,7 +117,16 @@ app.get("/test/*", (req, res) => {
     res.send(html);
 });
 
-setInterval(() => {
+const interval = setInterval(function ping() {
+    wss.clients.forEach(function each(ws) {
+        if (ws.isAlive === false) return ws.terminate();
+
+        ws.isAlive = false;
+        ws.ping(noop);
+    });
+}, 30000);
+
+const printConnections = setInterval(() => {
     client.get(userCount, (err, result) => {
         console.log(`Users online: ${result}`);
     });
